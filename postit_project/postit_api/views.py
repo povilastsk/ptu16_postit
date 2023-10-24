@@ -37,3 +37,43 @@ class PostDetail(generics.RetrieveUpdateDestroyAPIView):
             return self.update(self.request, *args, **kwargs)
         else:
             raise ValidationError(_('Can only update your own posts'))
+        
+
+class CommentList(generics.ListCreateAPIView):
+    queryset = models.Comment.objects.all()
+    serializer_class = serializers.CommentSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        post = models.Post.objects.get(pk=self.kwargs['pk'])
+        return models.Comment.objects.filter(post=post)
+    
+    def perform_create(self, serializer):
+        post = models.Post.objects.get(pk=self.kwargs['pk'])
+        serializer.save(user=self.request.user, post=post)
+
+
+class CommentDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Comment.objects.all()
+    serializer_class = serializers.CommentSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def delete(self, request, *args, **kwargs):
+        post = models.Post.objects.filter(
+            pk=kwargs['pk'],
+            user=self.request.user,
+        )
+        if post.exists():
+            return self.destroy(self.request, *args, **kwargs)
+        else:
+            raise ValidationError(_('Can only delete your own comments'))
+        
+    def put(self, *args, **kwargs):
+        post = models.Comment.objects.filter(
+            pk=kwargs['pk'],
+            user=self.request.user,
+        )
+        if post.exists():
+            return self.update(self.request, *args, **kwargs)
+        else:
+            raise ValidationError(_('Can only update your own comments'))
