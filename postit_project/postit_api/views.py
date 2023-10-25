@@ -1,10 +1,10 @@
 from django.utils.translation import gettext_lazy as _
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, mixins, response, status
 from rest_framework.validators import ValidationError
 from . import models, serializers
 
 
-class PostLike(generics.CreateAPIView):
+class PostLike(generics.CreateAPIView, mixins.DestroyModelMixin):
     serializer_class = serializers.PostLikeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -20,8 +20,15 @@ class PostLike(generics.CreateAPIView):
         post = models.Post.objects.get(pk=self.kwargs['pk'])
         serializer.save(post=post, user=user)
 
+    def delete(self, *args, **kwargs):
+        if self.get_queryset().exists():
+            self.get_queryset().delete()
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            raise ValidationError('You only unlike a post after you like it')
 
-class CommentLike(generics.CreateAPIView):
+
+class CommentLike(generics.CreateAPIView, mixins.DestroyModelMixin):
     serializer_class = serializers.CommentLikeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -37,6 +44,13 @@ class CommentLike(generics.CreateAPIView):
         comment = models.Post.objects.get(pk=self.kwargs['pk'])
         serializer.save(comment=comment, user=user)
 
+    def delete(self, *args, **kwargs):
+        if self.get_queryset().exists():
+            self.get_queryset().delete()
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            raise ValidationError('You only unlike a comment after you like it')
+        
 
 class PostList(generics.ListCreateAPIView):
     queryset = models.Post.objects.all()
